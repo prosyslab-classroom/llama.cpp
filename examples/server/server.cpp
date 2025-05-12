@@ -1268,6 +1268,7 @@ struct server_context {
 
             res.data["completion_probabilities"] = probs_vector_to_json(ctx, probs_output);
         }
+        res.data["logits"] = logits_vector_to_json(ctx, slot.generated_token_probs);
 
         if (slot.oaicompat) {
             res.data["oaicompat_token_ctr"] = slot.n_decoded;
@@ -1319,6 +1320,7 @@ struct server_context {
 
             res.data["completion_probabilities"] = probs_vector_to_json(ctx, probs);
         }
+        res.data["logits"] = logits_vector_to_json(ctx, slot.generated_token_probs);
 
         if (slot.oaicompat) {
             res.data["oaicompat_token_ctr"] = slot.n_decoded;
@@ -1422,10 +1424,10 @@ struct server_context {
             task.cmpl_type = cmpl_type;
             task.type      = SERVER_TASK_TYPE_COMPLETION;
             if (replace_prompt) {
-                task.data  = task_data;
+                task.data = task_data;
                 task.data["prompt"] = std::move(prompt);
             } else {
-                task.data  = std::move(task_data);
+                task.data = std::move(task_data);
             }
             tasks.push_back(std::move(task));
         };
@@ -2370,6 +2372,13 @@ struct server_context {
                 result.tok = id;
 
                 const auto * cur_p = common_sampler_get_candidates(slot.smpl);
+
+                for (size_t i = 0; i < (size_t) cur_p->size; ++i) {
+                    result.logits.push_back({
+                        cur_p->data[i].id,
+                        i >= cur_p->size ? 0.0f : cur_p->data[i].p,
+                    });
+                }
 
                 for (size_t i = 0; i < (size_t) slot.sparams.n_probs; ++i) {
                     result.probs.push_back({

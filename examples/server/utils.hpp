@@ -278,6 +278,7 @@ struct completion_token_output {
     };
 
     std::vector<token_prob> probs;
+    std::vector<token_prob> logits;
 };
 
 // convert a vector of completion_token_output to json
@@ -296,6 +297,30 @@ static json probs_vector_to_json(const llama_context * ctx, const std::vector<co
         }
 
         const std::string tok_str = tokens_to_output_formatted_string(ctx, prob.tok);
+        out.push_back(json {
+            {"content", tok_str},
+            {"probs",   probs_for_token},
+        });
+    }
+
+    return out;
+}
+
+static json logits_vector_to_json(const llama_context * ctx, const std::vector<completion_token_output> & logits) {
+    json out = json::array();
+
+    for (const auto & logit : logits) {
+        json probs_for_token = json::array();
+
+        for (const auto & p : logit.logits) {
+            const std::string tok_str = tokens_to_output_formatted_string(ctx, p.tok);
+            probs_for_token.push_back(json {
+                {"tok_str", tok_str},
+                {"prob",    p.prob},
+            });
+        }
+
+        const std::string tok_str = tokens_to_output_formatted_string(ctx, logit.tok);
         out.push_back(json {
             {"content", tok_str},
             {"probs",   probs_for_token},
